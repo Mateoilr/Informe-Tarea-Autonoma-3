@@ -1,6 +1,6 @@
-# Practica servidor web
+# Práctica No. 3 - Persistencia de datos en contenedores PostgreSQL con Docker
 
-## 1. Titulo
+## 1. Título
 Persistencia de datos en contenedores PostgreSQL con y sin volúmenes en Docker.
 
 ## 2. Tiempo de duración
@@ -23,26 +23,18 @@ Con esto se entiende cómo separar la capa de datos de la capa de ejecución del
 
 ---
 
-**Figura 1-1.** Arquitectura básica de Docker y volúmenes  
-![Arquitectura Docker y Volúmenes](https://docs.docker.com/storage/images/types-of-mounts-volume.png)
+## 4. Conocimientos previos
 
-**Figura 1-2.** Ejemplo de conexión entre cliente SQL y contenedor PostgreSQL  
-![Conexión PostgreSQL](https://www.postgresql.org/media/img/about/elephant.png)
-
----
-
-## 4. Conocimientos previos.
-   
 Para realizar esta práctica el estudiante necesita tener claro los siguientes temas:
 - Comandos básicos de Docker (`run`, `stop`, `rm`, `volume create`, `ps`).
-- Conocimientos básicos de PostgreSQL y SQL (CREATE, INSERT, SELECT).
-- Manejo de un cliente SQL como DBeaver, DataGrip o pgAdmin.
+- Conocimientos básicos de PostgreSQL y SQL (`CREATE`, `INSERT`, `SELECT`).
+- Manejo de un cliente SQL como **TablePlus**, **DBeaver** o **pgAdmin**.
 - Comprensión de redes y puertos (localhost, mapeo de puertos).
 
 ---
 
 ## 5. Objetivos a alcanzar
-   
+
 - Comprobar la pérdida de datos en contenedores sin volúmenes.
 - Implementar un contenedor PostgreSQL con persistencia mediante volúmenes.
 - Analizar el comportamiento de los datos al eliminar y recrear un contenedor.
@@ -50,39 +42,43 @@ Para realizar esta práctica el estudiante necesita tener claro los siguientes t
 
 ---
 
-## 6. Equipo necesario:
-  
+## 6. Equipo necesario
+
 - Computador con sistema operativo **Windows 10/11**, **Linux** o **MacOS**.  
 - **Docker Desktop** instalado y configurado.  
-- Cliente SQL como **DBeaver**, **pgAdmin**, **TablePlus** o **DataGrip**.  
+- Cliente SQL: **TablePlus**.  
 - Imagen oficial de PostgreSQL: `postgres:latest`.  
 - Conexión a internet para descargar la imagen inicial de Docker.
 
 ---
 
-## 7. Material de apoyo.
-   
-- [Documentación oficial de Docker](https://docs.docker.com)
-- [Documentación de PostgreSQL](https://www.postgresql.org/docs/)
-- Guía de la asignatura de Tendencias Tecnológicas.
-- Comandos básicos de Docker (Cheat Sheet).
+## 7. Material de apoyo
+
+- [Documentación oficial de Docker](https://docs.docker.com)  
+- [Documentación de PostgreSQL](https://www.postgresql.org/docs/)  
+- Guía rápida de comandos Docker (Cheat Sheet).  
 
 ---
 
 ## 8. Procedimiento
 
-### Parte 1: Base de datos sin volumen
+### 🧩 Parte 1: Base de datos sin volumen
 
 **Paso 1:** Crear el contenedor PostgreSQL  
 ```bash
 docker run -d --name server_db1 -e POSTGRES_PASSWORD=1234 -p 5432:5432 postgres
 ```
 
-**Paso 2:** Conectarse desde el cliente SQL  
-Host: `localhost`  
-Puerto: `5432`  
-Usuario: `postgres`  
-Contraseña: `1234`
+**Figura 1-1.** Contenedor PostgreSQL “server_db1” ejecutándose sin volumen  
+<img src="capturas/server_db1.png" width="800px">
+
+---
+
+**Paso 2:** Conectarse desde TablePlus  
+- Host: `127.0.0.1`  
+- Port: `5432`  
+- User: `postgres`  
+- Password: `1234`  
 
 **Paso 3:** Crear base de datos y tabla  
 ```sql
@@ -96,10 +92,20 @@ CREATE TABLE customer (
 INSERT INTO customer (fullname, status) VALUES ('Juan Pérez', 'activo');
 ```
 
+**Figura 1-2.** Creación de la base de datos y tabla *customer*  
+<img src="capturas/bdcreadatableplus.png" width="800px">
+
+---
+
 **Paso 4:** Verificar datos  
 ```sql
 SELECT * FROM customer;
 ```
+
+**Figura 1-3.** Registro insertado en la tabla *customer*  
+<img src="capturas/registro.png" width="800px">
+
+---
 
 **Paso 5:** Eliminar contenedor y volver a crearlo  
 ```bash
@@ -109,23 +115,37 @@ docker run -d --name server_db1 -e POSTGRES_PASSWORD=1234 -p 5432:5432 postgres
 ```
 
 **Resultado:**  
-La base de datos `test` y la tabla `customer` desaparecen, los datos **no se conservan**.
+La base de datos `test` desaparece al recrear el contenedor.
+
+**Figura 1-4.** Base de datos no persistente al recrear el contenedor sin volumen  
+<img src="capturas/bdborrada.png" width="800px">
 
 ---
 
-### Parte 2: Base de datos con volumen
+### 💾 Parte 2: Base de datos con volumen
 
-**Paso 1:** Crear un volumen  
+**Paso 1:** Crear el volumen  
 ```bash
 docker volume create pgdata
+docker volume ls
 ```
+
+**Figura 1-5.** Volumen Docker “pgdata” creado correctamente  
+<img src="capturas/volumencreada.png" width="800px">
+
+---
 
 **Paso 2:** Crear contenedor con el volumen  
 ```bash
 docker run -d --name server_db2 -e POSTGRES_PASSWORD=1234 -p 5433:5432 -v pgdata:/var/lib/postgresql/data postgres
 ```
 
-**Paso 3:** Conectarse nuevamente y crear base de datos  
+**Figura 1-6.** Contenedor PostgreSQL “server_db2” ejecutándose con volumen persistente  
+<img src="capturas/contenedorvolumenpersistente.png" width="800px">
+
+---
+
+**Paso 3:** Crear base y tabla nuevamente  
 ```sql
 CREATE DATABASE test;
 \c test;
@@ -137,44 +157,41 @@ CREATE TABLE customer (
 INSERT INTO customer (fullname, status) VALUES ('María Gómez', 'activo');
 ```
 
-**Paso 4:** Detener y eliminar el contenedor  
+**Paso 4:** Eliminar y recrear el contenedor manteniendo el volumen  
 ```bash
 docker stop server_db2
 docker rm server_db2
-```
-
-**Paso 5:** Volver a crear el contenedor con el mismo volumen  
-```bash
 docker run -d --name server_db2 -e POSTGRES_PASSWORD=1234 -p 5433:5432 -v pgdata:/var/lib/postgresql/data postgres
 ```
 
-**Resultado:**  
-La base de datos `test` y los registros permanecen, confirmando la persistencia de datos.
+**Figura 1-7.** Persistencia de datos tras recrear el contenedor con volumen  
+<img src="capturas/persistencia.png" width="800px">
 
 ---
 
-**Figura 1-3.** Contenedor PostgreSQL con volumen persistente  
-![Docker Volume Example](https://miro.medium.com/v2/resize:fit:800/1*ifp00kaVtWPEyIUkx-sWuw.png)
+**Paso 5:** Inspeccionar el volumen  
+```bash
+docker volume inspect pgdata
+```
+
+**Figura 1-8.** Estructura del volumen de datos en Docker  
+<img src="capturas/volumeinspect.png" width="800px">
 
 ---
 
-## 9. Resultados esperados:
-    
-- En la **Parte 1**, al eliminar el contenedor, los datos desaparecen.  
-- En la **Parte 2**, al usar el volumen `pgdata`, los datos se mantienen tras la eliminación del contenedor.  
+## 9. Resultados esperados
 
 | Prueba     | Volumen | Resultado          |
 | ---------- | ------- | ------------------ |
-| Server_db1 | ❌ No    | Datos eliminados   |
-| Server_db2 | ✅ Sí    | Datos persistentes |
+| server_db1 | ❌ No    | Datos eliminados   |
+| server_db2 | ✅ Sí    | Datos persistentes |
 
-**Figura 1-4.** Ejemplo de conexión exitosa con PostgreSQL y tabla persistente  
-![Conexión DBeaver PostgreSQL](https://dbeaver.io/wp-content/uploads/2020/03/dbeaver-21.png)
+Los resultados confirman que los datos almacenados en un contenedor **sin volumen** se eliminan al borrarlo, mientras que con un **volumen Docker**, la información persiste incluso tras eliminar y recrear el contenedor.
 
 ---
 
 ## 10. Bibliografía
-    
+
 - Docker, Inc. (2024). *Docker Documentation*. Recuperado de [https://docs.docker.com](https://docs.docker.com)  
 - PostgreSQL Global Development Group. (2024). *PostgreSQL Documentation*. Recuperado de [https://www.postgresql.org/docs/](https://www.postgresql.org/docs/)  
-- Pahl, C. (2015). *Containerization and the PaaS Cloud*. IEEE Cloud Computing, 2(3), 24–31.  
+- Pahl, C. (2015). *Containerization and the PaaS Cloud*. IEEE Cloud Computing, 2(3), 24–31.
